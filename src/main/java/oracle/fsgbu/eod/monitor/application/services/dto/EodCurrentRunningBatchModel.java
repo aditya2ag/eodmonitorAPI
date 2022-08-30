@@ -52,8 +52,32 @@ public class EodCurrentRunningBatchModel implements Serializable {
 	@JsonProperty("holidayavg")
 	private String holidayavg = null;
 
+
+	@JsonProperty("errorCode")
+	private String errorCode = null;
+
+
+	@JsonProperty("errorDescription")
+	private String errorDescription = null;
+
 	
 		
+	public String getErrorCode() {
+		return errorCode;
+	}
+
+	public void setErrorCode(String errorCode) {
+		this.errorCode = errorCode;
+	}
+
+	public String getErrorDescription() {
+		return errorDescription;
+	}
+
+	public void setErrorDescription(String errorDescription) {
+		this.errorDescription = errorDescription;
+	}
+
 	public String getHolidayavg() {
 		return holidayavg;
 	}

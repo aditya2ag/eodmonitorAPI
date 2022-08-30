@@ -1,11 +1,48 @@
 package oracle.fsgbu.eod.monitor.application.services.service;
 
+import static org.springframework.http.ResponseEntity.ok;
+
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+
+import javax.annotation.PostConstruct;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
 import oracle.fsgbu.eod.monitor.application.services.api.EodMonitorAppApi;
+import oracle.fsgbu.eod.monitor.application.services.dao.ITblApiHealthcheckDetRepository;
 import oracle.fsgbu.eod.monitor.application.services.dao.ITblEocRunChartRespository;
 import oracle.fsgbu.eod.monitor.application.services.dao.ITblWLEurekaConfigRespository;
 import oracle.fsgbu.eod.monitor.application.services.dao.TblEodConfigRepository;
 import oracle.fsgbu.eod.monitor.application.services.dao.TblEodErrorTrackerRepository;
 import oracle.fsgbu.eod.monitor.application.services.dao.TblEodUserDetailsRepository;
+import oracle.fsgbu.eod.monitor.application.services.dto.ApiDetailsResponse;
+import oracle.fsgbu.eod.monitor.application.services.dto.ApiHealthCheckResponseModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.EodCurrentRunningBatchModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.EodErrorLogModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.EodHistoryCollectionModel;
@@ -18,10 +55,11 @@ import oracle.fsgbu.eod.monitor.application.services.dto.EurekaWeblogicServicesS
 import oracle.fsgbu.eod.monitor.application.services.dto.IEodStatusRepoModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.ITblWLEurekaConfigModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.ITblWLEurekaInstancesModel;
+import oracle.fsgbu.eod.monitor.application.services.dto.SaveExternalApiDetResponse;
+import oracle.fsgbu.eod.monitor.application.services.dto.SaveExternalApiDetails;
 import oracle.fsgbu.eod.monitor.application.services.dto.UserLoginDto;
 import oracle.fsgbu.eod.monitor.application.services.dto.UserLoginRespDto;
-import oracle.fsgbu.eod.monitor.application.services.entities.TblEocRunChart;
-import oracle.fsgbu.eod.monitor.application.services.entities.TblEodErrorTracker;
+import oracle.fsgbu.eod.monitor.application.services.entities.TblApihealthcheckDetails;
 import oracle.fsgbu.eod.monitor.application.services.entities.TblEodUserDetails;
 import oracle.fsgbu.eod.monitor.application.services.eureka.dto.Application;
 import oracle.fsgbu.eod.monitor.application.services.eureka.dto.Applications;
@@ -29,65 +67,16 @@ import oracle.fsgbu.eod.monitor.application.services.eureka.dto.DataCenterInfo;
 import oracle.fsgbu.eod.monitor.application.services.eureka.dto.EurekaApplicationResponse;
 import oracle.fsgbu.eod.monitor.application.services.eureka.dto.Instance;
 import oracle.fsgbu.eod.monitor.application.services.eureka.dto.Instance.InstanceStatus;
-import oracle.fsgbu.eod.monitor.application.services.filter.JwtRequestFilterCustom;
-import oracle.fsgbu.eod.monitor.application.services.eureka.dto.InstanceCollection;
 import oracle.fsgbu.eod.monitor.application.services.eureka.dto.Port;
-import oracle.fsgbu.eod.monitor.application.services.eureka.dto.SecurePort;
+import oracle.fsgbu.eod.monitor.application.services.utils.CallWebserviceRest;
 import oracle.fsgbu.eod.monitor.application.services.utils.EodConfigUtils;
 import oracle.fsgbu.eod.monitor.application.services.utils.EodCurrentRunningBatchUtils;
 import oracle.fsgbu.eod.monitor.application.services.utils.EodErrorTrackerUtils;
 import oracle.fsgbu.eod.monitor.application.services.utils.EodUserDetailsUtils;
+import oracle.fsgbu.eod.monitor.application.services.utils.ValidateJson;
 import oracle.fsgbu.eod.monitor.application.services.utils.security.JwtUtils;
 import oracle.fsgbu.eod.monitor.application.services.weblogic.dto.WLServicesStatusModel;
 import oracle.fsgbu.eod.monitor.application.services.weblogic.dto.WebLogicResponseModel;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.web.format.DateTimeFormatters;
-import org.springframework.data.domain.Sort;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
-import static org.springframework.http.ResponseEntity.ok;
-
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAdjuster;
-import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.PostConstruct;
-
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class EodMonitorService implements EodMonitorAppApi {
@@ -127,6 +116,9 @@ public class EodMonitorService implements EodMonitorAppApi {
 
 	@Autowired
 	private JwtUtils jwtUtils;
+
+	@Autowired
+	ITblApiHealthcheckDetRepository tblApiHealthcheckDetRepository;
 
 	@Override
 	public String getTestmsg() {
@@ -179,7 +171,6 @@ public class EodMonitorService implements EodMonitorAppApi {
 	@Override
 	public ResponseEntity<EodStatusModel> getEodStatus(LocalDate eodDate) {
 		ResponseEntity<EodStatusModel> responseDetails;
-		Integer nonRunBatchCount = 0;
 
 		this.eodStatusModel.ResetEodStatusModel();
 
@@ -212,10 +203,10 @@ public class EodMonitorService implements EodMonitorAppApi {
 	}
 
 	@Override
-	public ResponseEntity<List<EodCurrentRunningBatchModel>> getAllCurrentRunningBatches() {
+	public ResponseEntity<List<EodCurrentRunningBatchModel>> getAllCurrentAbortedBatches() {
 		ResponseEntity<List<EodCurrentRunningBatchModel>> responseDetails;
 		final List<EodCurrentRunningBatchModel> responseList = EodCurrentRunningBatchUtils
-				.convertIEntityListToVOList(this.tblEocRunChartRespository.fetchCurrentRunningBatches());
+				.convertAbortedBatchIEntityListToVOList(this.tblEocRunChartRespository.fetchCurrentAbortedBatches());
 		responseDetails = ok(responseList);
 		return responseDetails;
 	}
@@ -264,9 +255,11 @@ public class EodMonitorService implements EodMonitorAppApi {
 		List<EodHistoryModel> eodHistoryModelList = new ArrayList<EodHistoryModel>();
 		List<String> categoriesDate = new ArrayList<String>();
 		// getEodHistoryDatafromEntity();
+		String[] historyBranches = this.tblEocRunChartRespository.historyBranches().split(",");
+		List<String> histBrnList = Arrays.asList(historyBranches);
 		HashMap<String, Object> voListRepoHashMap = new HashMap<String, Object>();
 		voListRepoHashMap = EodCurrentRunningBatchUtils
-				.convertIHistoryEntityListToVOList(this.tblEocRunChartRespository.fetchEodHistoryData(7));
+				.convertIHistoryEntityListToVOList(this.tblEocRunChartRespository.fetchEodHistoryData(7,histBrnList));
 
 		eodHistoryModelList = (List<EodHistoryModel>) voListRepoHashMap.get("EodHistoryModel");
 		categoriesDate = (List<String>) voListRepoHashMap.get("categoryDate");
@@ -287,7 +280,7 @@ public class EodMonitorService implements EodMonitorAppApi {
 		debug("Here inside getEurekaWLServicesStatus");
 		List<EurekaWeblogicServicesStatusModel> eurekaWLCollectionModelList = invokeWebLogicServices(
 				productName.toUpperCase());
-		eurekaWLCollectionModelList = invokeEurekaServices();
+		eurekaWLCollectionModelList = invokeEurekaServices(productName.toUpperCase());
 
 		responseDetails = ok(eurekaWLCollectionModelList);
 		return responseDetails;
@@ -359,19 +352,19 @@ public class EodMonitorService implements EodMonitorAppApi {
 				eurekaAppname = wlServicesStatusModel.getName().toUpperCase();
 			}
 			debug("EurekaAppName for Weblogic:" + eurekaAppname);
-			this.wlStatusofAppsHashmap.put(eurekaAppname,
-					(wlServicesStatusModel.getState().contentEquals("STATE_ACTIVE") ? "UP" : "DOWN"));
+			this.wlStatusofAppsHashmap.put(eurekaAppname, ((wlServicesStatusModel.getState() == null) ? "DOWN"
+					: wlServicesStatusModel.getState().contentEquals("STATE_ACTIVE") ? "UP" : "DOWN"));
 
 		}
 
 		return eurekaWLCollectionModelList;
 	}
 
-	private List<EurekaWeblogicServicesStatusModel> invokeEurekaServices() {
+	private List<EurekaWeblogicServicesStatusModel> invokeEurekaServices(String product) {
 		List<EurekaWeblogicServicesStatusModel> eurekaWLCollectionModelList = new ArrayList<>();
 
 		UriComponentsBuilder builder = UriComponentsBuilder
-				.fromHttpUrl(this.eodConfigTblHashmap.get("SERVICE_EUREKA_API").trim());
+				.fromHttpUrl(this.eodConfigTblHashmap.get(product + "_EUREKA_API").trim());
 		LOGGER.info("URL getting called {} ", builder.toUriString());
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Accept", "application/json");
@@ -382,6 +375,7 @@ public class EodMonitorService implements EodMonitorAppApi {
 		ResponseEntity<EurekaApplicationResponse> eurekaApplicationResponse = null;
 		eurekaApplicationResponse = restTemplate.exchange(builder.toUriString(), HttpMethod.GET, entity,
 				EurekaApplicationResponse.class, new Object[0]);
+
 		debug("Total Services Deployed:"
 				+ eurekaApplicationResponse.getBody().getApplications().getApplication().size());
 
@@ -527,6 +521,149 @@ public class EodMonitorService implements EodMonitorAppApi {
 		}
 
 		return ResponseEntity.ok(userLoginResponse); // Response entity with Token may come later
+	}
+
+	@Override
+	public ResponseEntity<ApiHealthCheckResponseModel> checkApiHealth(String apiName) {
+
+		Optional<TblApihealthcheckDetails> tblApiDetails = this.tblApiHealthcheckDetRepository.findById(apiName);
+		ApiHealthCheckResponseModel response = new ApiHealthCheckResponseModel();
+		CallWebserviceRest callWebserviceRest = new CallWebserviceRest();
+
+		response.setApiName(apiName);
+		String[] serviceResponse = new String[4];
+
+		try {
+
+			switch (tblApiDetails.get().getReqMethod().toUpperCase()) {
+			case "GET":
+				System.out.println("Get request");
+
+				serviceResponse = callWebserviceRest.getRequest(tblApiDetails.get().getReqMethod(),
+						tblApiDetails.get().getRequestHeader(), tblApiDetails.get().getRequestParam(),
+						tblApiDetails.get().getRequestBody(), tblApiDetails.get().getUrl());
+				break;
+			case "POST":
+				serviceResponse = callWebserviceRest.postRequest(tblApiDetails.get().getReqMethod(),
+						tblApiDetails.get().getRequestHeader(), tblApiDetails.get().getRequestParam(),
+						tblApiDetails.get().getRequestBody(), tblApiDetails.get().getUrl());
+				break;
+			case "PUT":
+
+				break;
+			case "PATCH":
+
+				break;
+			default:
+
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("Failed to invoke the API:" + e.getMessage());
+		}
+
+		HttpStatus httpStatus = HttpStatus.resolve(Integer.valueOf(serviceResponse[0]));
+		response.setStatus(httpStatus.toString());
+		response.setResponseTime(serviceResponse[2]);
+		response.setResponseSize(serviceResponse[3]);
+		return new ResponseEntity<ApiHealthCheckResponseModel>(response, httpStatus);
+	}
+
+	@Override
+	public ResponseEntity<SaveExternalApiDetResponse> saveExternalApiDetails(SaveExternalApiDetails apiDetails) {
+
+		SaveExternalApiDetResponse responseDetail = new SaveExternalApiDetResponse();
+		Optional<TblApihealthcheckDetails> tblApiDetails = this.tblApiHealthcheckDetRepository
+				.findById(apiDetails.getUrl());
+
+		if (tblApiDetails.isPresent()) {
+			System.out.println("Api Name " + tblApiDetails.get().getApiName() + " is already saved");
+			/* EodUserDetailsUtils.errDesc */String errDesc = "Api Name '" + tblApiDetails.get().getApiName()
+					+ "' with URL '" + tblApiDetails.get().getUrl() + "' is already registered";
+
+			responseDetail.setStatus(errDesc);
+			return new ResponseEntity<SaveExternalApiDetResponse>(responseDetail, HttpStatus.OK);
+		}
+
+		if (!validateApiDetails(apiDetails, responseDetail)) {
+			// responseDetail.setStatus("Kindly enter valid JSON Request Body");
+			return new ResponseEntity<SaveExternalApiDetResponse>(responseDetail, HttpStatus.OK);
+		}
+
+		TblApihealthcheckDetails tblApihealthcheckDetails = this.tblApiHealthcheckDetRepository
+				.saveAndFlush(EodConfigUtils.convertVOToEntity(apiDetails));
+
+		responseDetail.setStatus("Success");
+		return new ResponseEntity<SaveExternalApiDetResponse>(responseDetail, HttpStatus.OK);
+
+	}
+
+	@Override
+	public ResponseEntity<SaveExternalApiDetResponse> modifyExternalApiDetails(SaveExternalApiDetails apiDetails) {
+
+		SaveExternalApiDetResponse responseDetail = new SaveExternalApiDetResponse();
+		Optional<TblApihealthcheckDetails> tblApiDetails = this.tblApiHealthcheckDetRepository
+				.findById(apiDetails.getUrl());
+
+		if (tblApiDetails.isPresent()) {
+
+			if (!validateApiDetails(apiDetails, responseDetail)) {
+				// responseDetail.setStatus("Kindly enter valid JSON Request Body");
+				return new ResponseEntity<SaveExternalApiDetResponse>(responseDetail, HttpStatus.OK);
+			}
+
+			this.tblApiHealthcheckDetRepository.deleteById(apiDetails.getUrl());
+			TblApihealthcheckDetails tblApihealthcheckDetails = this.tblApiHealthcheckDetRepository
+					.saveAndFlush(EodConfigUtils.convertVOToEntity(apiDetails));
+
+		}
+
+		responseDetail.setStatus("Success");
+		return new ResponseEntity<SaveExternalApiDetResponse>(responseDetail, HttpStatus.OK);
+
+	}
+
+	@Override
+	public ResponseEntity<SaveExternalApiDetResponse> deleteExternalApiDetails(String id) {
+		SaveExternalApiDetResponse responseDetail = new SaveExternalApiDetResponse();
+		this.tblApiHealthcheckDetRepository.deleteByCustomId(id);
+		responseDetail.setStatus("Success");
+		return new ResponseEntity<SaveExternalApiDetResponse>(responseDetail, HttpStatus.OK);
+
+	}
+
+	@Override
+	public ResponseEntity<List<ApiDetailsResponse>> fetchAllApiDetails() {
+		// TODO Auto-generated method stub
+		List<ApiDetailsResponse> resonseDetails = new ArrayList<ApiDetailsResponse>();
+
+		resonseDetails = EodConfigUtils.convertApiEntityListToVOList(this.tblApiHealthcheckDetRepository.findAll());
+
+		return new ResponseEntity<List<ApiDetailsResponse>>(resonseDetails, HttpStatus.OK);
+
+	}
+
+	private boolean validateApiDetails(SaveExternalApiDetails apiDetails, SaveExternalApiDetResponse responseDetail) {
+		debug("Validation JSON requests");
+		if (!ValidateJson.isValid(apiDetails.getRequestBody())) {
+			debug("Kindly enter valid JSON Request Body, returning false");
+			responseDetail.setStatus("Kindly enter valid JSON Request Body");
+			return false;
+		}
+
+		if (!ValidateJson.isValid(apiDetails.getRequestHeader())) {
+			debug("Kindly enter valid JSON Request Header, returning false");
+			responseDetail.setStatus("Kindly enter valid JSON Request Header");
+			return false;
+		}
+
+		if (!ValidateJson.isValid(apiDetails.getRequestParam())) {
+			debug("Kindly enter valid JSON Request Param, returning false");
+			responseDetail.setStatus("Kindly enter valid JSON Request Param");
+			return false;
+		}
+
+		return true;
 	}
 
 	@Override

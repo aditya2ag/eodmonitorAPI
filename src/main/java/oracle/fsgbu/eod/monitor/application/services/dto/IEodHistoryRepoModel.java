@@ -6,7 +6,7 @@ import java.util.Date;
 
 public interface IEodHistoryRepoModel {
 
-	Integer getMaxRunTime();
+	Double getMaxRunTime();
 
 	String getEocStage();
 

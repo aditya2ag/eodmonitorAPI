@@ -15,7 +15,10 @@ package oracle.fsgbu.eod.monitor.application.services.utils;
 
 import org.springframework.util.StringUtils;
 
+import oracle.fsgbu.eod.monitor.application.services.dto.ApiDetailsResponse;
 import oracle.fsgbu.eod.monitor.application.services.dto.EodConfigModel;
+import oracle.fsgbu.eod.monitor.application.services.dto.SaveExternalApiDetails;
+import oracle.fsgbu.eod.monitor.application.services.entities.TblApihealthcheckDetails;
 import oracle.fsgbu.eod.monitor.application.services.entities.TblEodConfig;
 
 import org.slf4j.Logger;
@@ -91,4 +94,38 @@ public class EodConfigUtils {
 		return voResponse;
 	}
 
+	
+	public static TblApihealthcheckDetails convertVOToEntity(SaveExternalApiDetails vo) {
+		TblApihealthcheckDetails entity = null;
+		if (vo != null) {
+			entity = new TblApihealthcheckDetails();
+			entity.setApiName(vo.getApiName());
+			entity.setUrl(vo.getUrl());
+			entity.setReqMethod(vo.getReqMethod());
+			entity.setRequestHeader(vo.getRequestHeader());
+			entity.setRequestBody(vo.getRequestBody());
+			entity.setRequestParam(vo.getRequestParam());
+
+		}
+		return entity;
+	}
+	
+	public static ApiDetailsResponse convertEntityToVO(TblApihealthcheckDetails entity) {
+		ApiDetailsResponse vo = null;
+		if (entity != null) {
+			vo = new ApiDetailsResponse();
+			vo.setId(entity.getId());
+			vo.setApiName(entity.getApiName());
+			vo.setUrl(entity.getUrl());
+		}
+		return vo;
+	}
+
+	public static List<ApiDetailsResponse> convertApiEntityListToVOList(List<TblApihealthcheckDetails> entityList) {
+		List<ApiDetailsResponse> voList = new ArrayList<>();
+		entityList.forEach(entity -> voList.add(convertEntityToVO(entity)));
+		return voList;
+	}
+	
+	
 }

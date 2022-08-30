@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import net.bytebuddy.asm.Advice.Local;
+import oracle.fsgbu.eod.monitor.application.services.dto.IEodCurrentAbortedBatchRepoModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.IEodCurrentRunningBatchRepoModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.IEodHistoryRepoModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.IEodStatusRepoModel;
@@ -31,9 +32,9 @@ public interface ITblEocRunChartRespository extends JpaRepository<TblEocRunChart
 	@Query(value ="SELECT (row_number() OVER(PARTITION BY '' ORDER BY branch_code)) AS Id, branch_code AS Branchcode, eoc_stage AS Eocstage, eoc_batch AS Eocbatch, eoc_batch_status AS Eocbatchstatus, start_time AS Starttime, end_time AS Endtime,ROUND(((nvl((((24 * 60) * EXTRACT(DAY FROM(end_time - start_time)  DAY(9) TO SECOND)) + (60 * EXTRACT(HOUR FROM(end_time - start_time) DAY(9) TO SECOND)) + EXTRACT(MINUTE FROM(end_time - start_time) DAY(9) TO SECOND)) * 60, 0) + nvl(EXTRACT(SECOND FROM(end_time - start_time) DAY(9) TO SECOND),0)) / 60), 1) AS Duration from aetb_eoc_programs order by branch_code,eoc_stage_seq,eoc_batch_seq", nativeQuery = true) 
 	public List<IEodCurrentRunningBatchRepoModel> fetchAllBatcheStatus();
 	 
-	
-	@Query(value = "SELECT (row_number() OVER(PARTITION BY '' ORDER BY branch_code)) AS Id, branch_code AS Branchcode, eoc_stage AS Eocstage, eoc_batch AS Eocbatch, eoc_batch_status AS Eocbatchstatus, start_time AS Starttime, end_time AS Endtime,ROUND(((nvl((((24 * 60) * EXTRACT(DAY FROM(end_time - start_time)  DAY(9) TO SECOND)) + (60 * EXTRACT(HOUR FROM(end_time - start_time) DAY(9) TO SECOND)) + EXTRACT(MINUTE FROM(end_time - start_time) DAY(9) TO SECOND)) * 60, 0) + nvl(EXTRACT(SECOND FROM(end_time - start_time) DAY(9) TO SECOND),0)) / 60), 1) AS Duration from aetb_eoc_programs where nvl(eoc_batch_status,'N') IN ('W','A') order by branch_code,eoc_stage_seq,eoc_batch_seq", nativeQuery = true)
-	public List<IEodCurrentRunningBatchRepoModel> fetchCurrentRunningBatches();
+	//Aborted batches only.
+	@Query(value = "SELECT (row_number() OVER(PARTITION BY '' ORDER BY branch_code)) AS Id, branch_code AS Branchcode, eoc_stage AS Eocstage, eoc_batch AS Eocbatch, eoc_batch_status AS Eocbatchstatus, start_time AS Starttime, end_time AS Endtime,ROUND(((nvl((((24 * 60) * EXTRACT(DAY FROM(end_time - start_time)  DAY(9) TO SECOND)) + (60 * EXTRACT(HOUR FROM(end_time - start_time) DAY(9) TO SECOND)) + EXTRACT(MINUTE FROM(end_time - start_time) DAY(9) TO SECOND)) * 60, 0) + nvl(EXTRACT(SECOND FROM(end_time - start_time) DAY(9) TO SECOND),0)) / 60), 1) AS Duration, error_code AS Error, error AS ErrorDesc from aetb_eoc_programs where nvl(eoc_batch_status,'N') IN ('A') and start_time IS NOT NULL order by branch_code,eoc_stage_seq,eoc_batch_seq", nativeQuery = true)
+	public List<IEodCurrentAbortedBatchRepoModel> fetchCurrentAbortedBatches();
 	
 	
 	//@Query(value = "SELECT (row_number() OVER(PARTITION BY '' ORDER BY branch_code)) AS Id, branch_code AS Branchcode, eoc_stage AS Eocstage, eoc_batch AS Eocbatch, eoc_batch_status AS Eocbatchstatus, start_time AS Starttime, end_time AS Endtime,ROUND(((nvl((((24 * 60) * EXTRACT(DAY FROM(end_time - start_time)  DAY(9) TO SECOND)) + (60 * EXTRACT(HOUR FROM(end_time - start_time) DAY(9) TO SECOND)) + EXTRACT(MINUTE FROM(end_time - start_time) DAY(9) TO SECOND)) * 60, 0) + nvl(EXTRACT(SECOND FROM(end_time - start_time) DAY(9) TO SECOND),0)) / 60), 1) AS Duration from aetb_eoc_programs order by branch_code,eoc_stage_seq,eoc_batch_seq", nativeQuery = true)
@@ -43,11 +44,32 @@ public interface ITblEocRunChartRespository extends JpaRepository<TblEocRunChart
 	public List<IEodTopRunningBatchRepoModel> fetchTopRunningBatches(@Param("monthendClause") List<LocalDate> monthendClause);
 
 
-	@Query(value = "SELECT MAX(actual_eoc_run_time) MaxRunTime,eoc_stage EocStage,branch_date BranchDate FROM AETB_EOC_STAGE_RUNTIME_CU WHERE branch_date BETWEEN (branch_date - :eodHistoryDays) AND branch_date GROUP BY eoc_stage, branch_date ORDER BY eoc_stage, branch_date", nativeQuery = true)
-	public List<IEodHistoryRepoModel> fetchEodHistoryData(@Param("eodHistoryDays") Integer eodHistoryDays);
+	/*
+	 * @Query(value =
+	 * "SELECT MAX(actual_eoc_run_time) MaxRunTime,eoc_stage EocStage,branch_date BranchDate FROM AETB_EOC_STAGE_RUNTIME_CU WHERE branch_date BETWEEN (branch_date - :eodHistoryDays) AND branch_date GROUP BY eoc_stage, branch_date ORDER BY eoc_stage, branch_date"
+	 * , nativeQuery = true) public List<IEodHistoryRepoModel>
+	 * fetchEodHistoryData(@Param("eodHistoryDays") Integer eodHistoryDays);
+	 */
+	
+	/*
+	 * @Query(value =
+	 * "SELECT MAX(stage_run_time) MaxRunTime,eoc_stage EocStage,branch_date BranchDate FROM aevw_eoc_stage_runtime t WHERE branch_date BETWEEN ((select prev_working_day from sttm_dates WHERE branch_code = t.branch_code) - :eodHistoryDays) AND branch_date AND branch_code IN ('020', '021', '022') GROUP BY eoc_stage, branch_date ORDER BY eoc_stage, branch_date"
+	 * , nativeQuery = true) public List<IEodHistoryRepoModel>
+	 * fetchEodHistoryData(@Param("eodHistoryDays") Integer eodHistoryDays);
+	 */
+	
+	@Query(value = "SELECT MAX(stage_run_time) MaxRunTime,eoc_stage EocStage,branch_date BranchDate FROM aevw_eoc_stage_runtime t WHERE branch_date BETWEEN ((select prev_working_day from sttm_dates WHERE branch_code = t.branch_code) - :eodHistoryDays) AND branch_date AND branch_code IN :historyBrns GROUP BY eoc_stage, branch_date ORDER BY eoc_stage, branch_date", nativeQuery = true)
+	public List<IEodHistoryRepoModel> fetchEodHistoryData(@Param("eodHistoryDays") Integer eodHistoryDays,@Param("historyBrns") List<String> historyBrns);
+	
 	
 	@Query(value ="SELECT today FROM sttm_dates WHERE branch_code = (SELECT ho_branch FROM sttm_bank)",nativeQuery=true)
 	public Timestamp fetchCoreSystemDate();
+	
+	
+	/*Temp code*/
+	
+	@Query(value ="SELECT value FROM tbl_eod_config WHERE key = 'HistoryBranches' ",nativeQuery=true)
+	public String historyBranches();
 	
 	
 }

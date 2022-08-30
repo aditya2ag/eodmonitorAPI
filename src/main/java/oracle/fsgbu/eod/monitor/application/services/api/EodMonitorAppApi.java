@@ -10,6 +10,8 @@ import javax.xml.ws.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import oracle.fsgbu.eod.monitor.application.services.dto.ApiDetailsResponse;
+import oracle.fsgbu.eod.monitor.application.services.dto.ApiHealthCheckResponseModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.EodCurrentRunningBatchCollectionModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.EodCurrentRunningBatchModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.EodErrorLogModel;
@@ -21,10 +23,13 @@ import oracle.fsgbu.eod.monitor.application.services.dto.EodTopRunningBatchModel
 import oracle.fsgbu.eod.monitor.application.services.dto.EodUserDetailsReqModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.EodUserDetailsResModel;
 import oracle.fsgbu.eod.monitor.application.services.dto.EurekaWeblogicServicesStatusModel;
+import oracle.fsgbu.eod.monitor.application.services.dto.SaveExternalApiDetResponse;
+import oracle.fsgbu.eod.monitor.application.services.dto.SaveExternalApiDetails;
 import oracle.fsgbu.eod.monitor.application.services.dto.UserLoginDto;
 import oracle.fsgbu.eod.monitor.application.services.eureka.dto.Application;
 import oracle.fsgbu.eod.monitor.application.services.eureka.dto.Applications;
 import oracle.fsgbu.eod.monitor.application.services.eureka.dto.EurekaApplicationResponse;
+
 
 @Component
 public interface EodMonitorAppApi {
@@ -37,7 +42,7 @@ public interface EodMonitorAppApi {
 
 	public ResponseEntity<EodHistoryCollectionModel> getEodHistoryData();
 
-	public ResponseEntity<List<EodCurrentRunningBatchModel>> getAllCurrentRunningBatches();
+	public ResponseEntity<List<EodCurrentRunningBatchModel>> getAllCurrentAbortedBatches();
 
 	public ResponseEntity<List<EodTopRunningBatchModel>> getAllTopRunningBatches();
 
@@ -57,4 +62,14 @@ public interface EodMonitorAppApi {
 			EodUserDetailsReqModel eodUserDetailsModel);
 
 	public ResponseEntity<?> loginInfo(UserLoginDto userDetails) throws Exception;
+
+	public ResponseEntity<ApiHealthCheckResponseModel> checkApiHealth(String apiName); 
+	
+	public ResponseEntity<SaveExternalApiDetResponse> saveExternalApiDetails(SaveExternalApiDetails apiDetails);
+
+	public ResponseEntity<SaveExternalApiDetResponse> modifyExternalApiDetails(SaveExternalApiDetails apiDetails);
+
+	public ResponseEntity<SaveExternalApiDetResponse> deleteExternalApiDetails(String id);
+
+	public ResponseEntity<List<ApiDetailsResponse>> fetchAllApiDetails();
 }

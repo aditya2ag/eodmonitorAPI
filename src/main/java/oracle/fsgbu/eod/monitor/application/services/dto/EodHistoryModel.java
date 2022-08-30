@@ -15,7 +15,7 @@ public class EodHistoryModel implements Serializable {
 	private String name;
 
 	@JsonProperty("data")
-	private List<Integer> data;
+	private List<Double> data;
 
 	public String getName() {
 		return name;
@@ -25,15 +25,15 @@ public class EodHistoryModel implements Serializable {
 		this.name = name;
 	}
 
-	public List<Integer> getData() {
+	public List<Double> getData() {
 		return data;
 	}
 
-	public void setData(List<Integer> data) {
+	public void setData(List<Double> data) {
 		this.data = data;
 	}
 
-	public void addData(Integer data) {
+	public void addData(Double data) {
 		if (null == this.data) {
 			this.data = new ArrayList<>();
 		}
