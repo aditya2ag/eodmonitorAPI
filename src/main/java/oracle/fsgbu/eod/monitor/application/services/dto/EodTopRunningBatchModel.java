@@ -47,6 +47,13 @@ public class EodTopRunningBatchModel implements Serializable {
 	@JsonProperty("monthlyavg")
 	private String monthlyavg = null;
 
+	@JsonProperty("sessionId")
+	private String sessionId = null;
+
+	@JsonProperty("serialNo")
+	private String serialNo = null;
+
+	
 	@JsonProperty("holidayavg")
 	private String holidayavg = null;
 
@@ -140,7 +147,22 @@ public class EodTopRunningBatchModel implements Serializable {
 	}
 
 	
-	
+	public String getSessionId() {
+		return sessionId;
+	}
+
+	public void setSessionId(String sessionId) {
+		this.sessionId = sessionId;
+	}
+
+	public String getSerialNo() {
+		return serialNo;
+	}
+
+	public void setSerialNo(String serialNo) {
+		this.serialNo = serialNo;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;

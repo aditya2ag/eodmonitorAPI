@@ -27,4 +27,8 @@ public interface IEodTopRunningBatchRepoModel {
 	String getMonthlyavg();
 	
 	String getHolidayavg();
+	
+	String getSessionId();
+	
+	String getSerialNo();
 }

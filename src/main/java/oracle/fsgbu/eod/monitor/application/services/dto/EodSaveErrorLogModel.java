@@ -3,20 +3,30 @@ package oracle.fsgbu.eod.monitor.application.services.dto;
 import java.io.Serializable;
 import java.util.Date;
 
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class EodSaveErrorLogModel implements Serializable {
 
-	@JsonFormat(pattern="dd-MMM-yyyy")
+	//@JsonFormat(pattern="dd-MMM-yyyy")
+	@JsonFormat(pattern="yyyy-mm-dd")
+	/*
+	 * @NotNull(message = "Eod date cannot be empty or null")
+	 * 
+	 * @Size(message="Eod date length must be more than 0" ,min = 1)
+	 */
 	private Date date;
 
 	private String user;
-	
+
 	@JsonProperty("code")
 	private String error;
 
 	private String description;
+
 
 	private String resolution;
 

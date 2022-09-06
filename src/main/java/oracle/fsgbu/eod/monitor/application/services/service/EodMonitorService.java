@@ -102,8 +102,8 @@ public class EodMonitorService implements EodMonitorAppApi {
 	@Autowired
 	private TblEodUserDetailsRepository tblEodUserDetailsRepository;
 
-	@Autowired
-	private EodStatusModel eodStatusModel;
+	// @Autowired
+	// private EodStatusModel eodStatusModel;
 
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
@@ -172,22 +172,23 @@ public class EodMonitorService implements EodMonitorAppApi {
 	public ResponseEntity<EodStatusModel> getEodStatus(LocalDate eodDate) {
 		ResponseEntity<EodStatusModel> responseDetails;
 
-		this.eodStatusModel.ResetEodStatusModel();
+		// this.eodStatusModel.ResetEodStatusModel();
+		EodStatusModel eodStatusModel = new EodStatusModel();
 
 		List<IEodStatusRepoModel> ieodStatusRepoModel = this.tblEocRunChartRespository.fetchBatchStatus(eodDate);
 		for (IEodStatusRepoModel iEodStatusRepoModel : ieodStatusRepoModel) {
 			switch (iEodStatusRepoModel.getEocBatchStatus()) {
 			case "C":
-				this.eodStatusModel.setCompleted(iEodStatusRepoModel.getBatchCount());
+				eodStatusModel.setCompleted(iEodStatusRepoModel.getBatchCount());
 				break;
 			case "W":
-				this.eodStatusModel.setRunning(iEodStatusRepoModel.getBatchCount());
+				eodStatusModel.setRunning(iEodStatusRepoModel.getBatchCount());
 				break;
 			case "A":
-				this.eodStatusModel.setRunning(iEodStatusRepoModel.getBatchCount());
+				eodStatusModel.setRunning(iEodStatusRepoModel.getBatchCount());
 				break;
 			case "N":
-				this.eodStatusModel.setPending(iEodStatusRepoModel.getBatchCount());
+				eodStatusModel.setPending(iEodStatusRepoModel.getBatchCount());
 				// nonRunBatchCount = iEodStatusRepoModel.getBatchCount();
 				break;
 			default:
@@ -195,8 +196,8 @@ public class EodMonitorService implements EodMonitorAppApi {
 			}
 		}
 
-		this.eodStatusModel.setTotal(this.eodStatusModel.getAborted() + this.eodStatusModel.getCompleted()
-				+ this.eodStatusModel.getRunning() + this.eodStatusModel.getPending() /* nonRunBatchCount */);
+		eodStatusModel.setTotal(eodStatusModel.getAborted() + eodStatusModel.getCompleted()
+				+ eodStatusModel.getRunning() + eodStatusModel.getPending() /* nonRunBatchCount */);
 
 		responseDetails = ok(eodStatusModel);
 		return responseDetails;
@@ -259,7 +260,7 @@ public class EodMonitorService implements EodMonitorAppApi {
 		List<String> histBrnList = Arrays.asList(historyBranches);
 		HashMap<String, Object> voListRepoHashMap = new HashMap<String, Object>();
 		voListRepoHashMap = EodCurrentRunningBatchUtils
-				.convertIHistoryEntityListToVOList(this.tblEocRunChartRespository.fetchEodHistoryData(7,histBrnList));
+				.convertIHistoryEntityListToVOList(this.tblEocRunChartRespository.fetchEodHistoryData(7, histBrnList));
 
 		eodHistoryModelList = (List<EodHistoryModel>) voListRepoHashMap.get("EodHistoryModel");
 		categoriesDate = (List<String>) voListRepoHashMap.get("categoryDate");
@@ -382,6 +383,13 @@ public class EodMonitorService implements EodMonitorAppApi {
 		eurekaApplicationResponse.getBody().getApplications().getApplication()
 				.forEach(action -> eurekaWLCollectionModelList.add(buildEurekaWeblogicServicesStatusModel(action)));
 
+		if (!eurekaApplicationResponse.hasBody() || eurekaWLCollectionModelList.isEmpty()) {
+			debug("Eureka Server is completely down");
+			this.wlStatusofAppsHashmap.forEach((k, v) -> {
+				eurekaWLCollectionModelList.add(buildEurekaWeblogicServicesStatusModel(k, v));
+			});
+		}
+
 		return eurekaWLCollectionModelList;
 	}
 
@@ -424,6 +432,24 @@ public class EodMonitorService implements EodMonitorAppApi {
 		statusModel.setTotalinstcount(this.wleurekaInstanceCount.get(application.getName().toUpperCase())); // fetch
 		// maintenace
 		// table
+		return statusModel;
+	}
+
+	private EurekaWeblogicServicesStatusModel buildEurekaWeblogicServicesStatusModel(String hashKey, String hashValue) {
+		// List<EurekaWeblogicServicesStatusModel> eurekaWLCollectionModelList = new
+		// ArrayList<>();
+		EurekaWeblogicServicesStatusModel statusModel = new EurekaWeblogicServicesStatusModel();
+
+		int eurInstcnt = 0;
+		String failedEurekaInsts = "";
+
+		statusModel.setWldeploymentstat(hashValue);
+		statusModel.setService(hashKey);
+		statusModel.setEurekaStat("DOWN");
+		statusModel.setEurInstcnt(eurInstcnt);
+		statusModel.setFailedInst(failedEurekaInsts);
+		statusModel.setTotalinstcount(0);
+
 		return statusModel;
 	}
 

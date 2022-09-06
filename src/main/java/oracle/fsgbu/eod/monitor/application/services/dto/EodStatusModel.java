@@ -12,19 +12,19 @@ public class EodStatusModel implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@JsonProperty("Completed")
-	private int completed;
+	private int completed = 0;
 
 	@JsonProperty("Aborted")
-	private int aborted;
+	private int aborted =0;
 
 	@JsonProperty("Running")
-	private int running;
+	private int running =0;
 
 	@JsonProperty("Pending")
-	private int pending;
+	private int pending= 0;
 
 	@JsonProperty("Total")
-	private int total;
+	private int total =0;
 
 	public int getPending() {
 		return pending;

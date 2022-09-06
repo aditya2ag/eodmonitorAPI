@@ -10,12 +10,13 @@ public class EodErrorLogModel implements Serializable {
 
 	private int srno;
 
-	@JsonFormat(pattern="dd-MMM-yyyy")
+	//@JsonFormat(pattern="dd-mm-yyyy")
+	@JsonFormat(pattern="yyyy-mm-dd")
 	private Date date;
 
 	private String user;
 	
-	//@JsonProperty("code")
+	@JsonProperty("code")
 	private String error;
 
 	private String description;

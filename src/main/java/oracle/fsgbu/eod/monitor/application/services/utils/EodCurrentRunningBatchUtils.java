@@ -207,6 +207,8 @@ public class EodCurrentRunningBatchUtils {
 			vo.setDailyavg(entity.getDailyavg());
 			vo.setMonthlyavg(entity.getMonthlyavg());
 			vo.setHolidayavg(entity.getHolidayavg());
+			vo.setSessionId(entity.getSessionId());
+			vo.setSerialNo(entity.getSerialNo());
 
 			// debug("Start time:"
 			// +LocalDateTime.parse(entity.getStarttime().format(formatter), formatter));
@@ -216,65 +218,46 @@ public class EodCurrentRunningBatchUtils {
 	}
 
 	/*
-	public static HashMap<String, Object> convertIHistoryEntityListToVOList(
-			List<IEodHistoryRepoModel> entityList) {
-		List<EodHistoryModel> voList = new ArrayList<>();
-		HashMap<String, Object> voListHashMap = new HashMap<String, Object>();
-
-		DateFormat formatter = new SimpleDateFormat("dd-MMM-yyyy");
-		String prevEocStage = null;
-		List<Integer> data = new ArrayList<Integer>();
-		List<String> categoryDate = new ArrayList<String>();
-		boolean uniqueDatesDone = false;
-		for (IEodHistoryRepoModel eodHistoryRepoModel : entityList) {
-			debug(eodHistoryRepoModel.getBranchDate().toString());
-			if (!uniqueDatesDone) {
-				categoryDate.add(formatter.format(eodHistoryRepoModel.getBranchDate()));
-			}
-
-			if (null == prevEocStage) {
-				prevEocStage = eodHistoryRepoModel.getEocStage();
-				data.add(eodHistoryRepoModel.getMaxRunTime());
-				continue;
-			}
-
-		//	if(prevEocStage.matches("POSTEOTI_*"))
-			
-			if (prevEocStage.contentEquals(eodHistoryRepoModel.getEocStage())) {
-				data.add(eodHistoryRepoModel.getMaxRunTime());
-				debug("prevEocStage<-->eodHistoryRepoModel.getEocStage()" + prevEocStage + "<-->"
-						+ eodHistoryRepoModel.getEocStage());
-			} else {
-				debug("eodHistoryRepoModel.getEocStage()" + eodHistoryRepoModel.getEocStage());
-				voList.add(convertIEntityToVO(eodHistoryRepoModel, data));
-				uniqueDatesDone = true;
-				prevEocStage = eodHistoryRepoModel.getEocStage();
-				data = new ArrayList<Integer>();
-				data.add(eodHistoryRepoModel.getMaxRunTime());
-
-			}
-		}
-		voListHashMap.put("EodHistoryModel", voList);
-		voListHashMap.put("categoryDate", categoryDate);
-		return voListHashMap;
-	}
-
-	private static EodHistoryModel convertIEntityToVO(IEodHistoryRepoModel entity, List<Integer> data) {
-		EodHistoryModel vo = null;
-		debug("Construction Done for stage:" + entity.getEocStage());
-		if (entity != null) {
-			vo = new EodHistoryModel();
-			vo.setName(entity.getEocStage());
-			vo.setData(data);
-		}
-		return vo;
-	}
-*/
+	 * public static HashMap<String, Object> convertIHistoryEntityListToVOList(
+	 * List<IEodHistoryRepoModel> entityList) { List<EodHistoryModel> voList = new
+	 * ArrayList<>(); HashMap<String, Object> voListHashMap = new HashMap<String,
+	 * Object>();
+	 * 
+	 * DateFormat formatter = new SimpleDateFormat("dd-MMM-yyyy"); String
+	 * prevEocStage = null; List<Integer> data = new ArrayList<Integer>();
+	 * List<String> categoryDate = new ArrayList<String>(); boolean uniqueDatesDone
+	 * = false; for (IEodHistoryRepoModel eodHistoryRepoModel : entityList) {
+	 * debug(eodHistoryRepoModel.getBranchDate().toString()); if (!uniqueDatesDone)
+	 * { categoryDate.add(formatter.format(eodHistoryRepoModel.getBranchDate())); }
+	 * 
+	 * if (null == prevEocStage) { prevEocStage = eodHistoryRepoModel.getEocStage();
+	 * data.add(eodHistoryRepoModel.getMaxRunTime()); continue; }
+	 * 
+	 * // if(prevEocStage.matches("POSTEOTI_*"))
+	 * 
+	 * if (prevEocStage.contentEquals(eodHistoryRepoModel.getEocStage())) {
+	 * data.add(eodHistoryRepoModel.getMaxRunTime());
+	 * debug("prevEocStage<-->eodHistoryRepoModel.getEocStage()" + prevEocStage +
+	 * "<-->" + eodHistoryRepoModel.getEocStage()); } else {
+	 * debug("eodHistoryRepoModel.getEocStage()" +
+	 * eodHistoryRepoModel.getEocStage());
+	 * voList.add(convertIEntityToVO(eodHistoryRepoModel, data)); uniqueDatesDone =
+	 * true; prevEocStage = eodHistoryRepoModel.getEocStage(); data = new
+	 * ArrayList<Integer>(); data.add(eodHistoryRepoModel.getMaxRunTime());
+	 * 
+	 * } } voListHashMap.put("EodHistoryModel", voList);
+	 * voListHashMap.put("categoryDate", categoryDate); return voListHashMap; }
+	 * 
+	 * private static EodHistoryModel convertIEntityToVO(IEodHistoryRepoModel
+	 * entity, List<Integer> data) { EodHistoryModel vo = null;
+	 * debug("Construction Done for stage:" + entity.getEocStage()); if (entity !=
+	 * null) { vo = new EodHistoryModel(); vo.setName(entity.getEocStage());
+	 * vo.setData(data); } return vo; }
+	 */
 	/*****************************************************************************/
 	private static final DecimalFormat df = new DecimalFormat("0.00");
-	
-	public static HashMap<String, Object> convertIHistoryEntityListToVOList(
-			List<IEodHistoryRepoModel> entityList) {
+
+	public static HashMap<String, Object> convertIHistoryEntityListToVOList(List<IEodHistoryRepoModel> entityList) {
 		List<EodHistoryModel> voList = new ArrayList<>();
 		HashMap<String, Object> voListHashMap = new HashMap<String, Object>();
 
@@ -357,7 +340,7 @@ public class EodCurrentRunningBatchUtils {
 			indx++;
 			cateHash.add(formatter.format(eodHistoryRepoModel.getBranchDate()));
 			Double runTime = Double.parseDouble(df.format(eodHistoryRepoModel.getMaxRunTime()));
-			
+
 			if (null == prevEocStage) {
 				prevEocStage = eodHistoryRepoModel.getEocStage();
 				data.add(runTime);
@@ -385,20 +368,40 @@ public class EodCurrentRunningBatchUtils {
 			}
 
 		}
-		
-		//Sorting the Category based on date
+
+		// Sorting the Category based on date
 		TreeSet<String> sortedCat = new TreeSet<String>(cateHash);
-		for(String cat: sortedCat) {
+		for (String cat : sortedCat) {
 			categoryDate.add(cat);
 		}
-	
-		voListHashMap.put("EodHistoryModel", voList);
+
+		// Sorting the stages based on FCUBS order
+		HashMap<String, EodHistoryModel> stagesMaps = new HashMap<String, EodHistoryModel>();
+		voList.forEach(action -> {
+			stagesMaps.put(action.getName(), action);
+		});
+
+		List<EodHistoryModel> voHistoryModelListSorted = new ArrayList<>();
+		voHistoryModelListSorted.add(stagesMaps.get("MARKTIMELVL9"));
+		voHistoryModelListSorted.add(stagesMaps.get("MARKEOTI"));
+		voHistoryModelListSorted.add(stagesMaps.get("POSTEOTI"));
+		voHistoryModelListSorted.add(stagesMaps.get("MARKEOFI"));
+		voHistoryModelListSorted.add(stagesMaps.get("POSTEOFI"));
+		voHistoryModelListSorted.add(stagesMaps.get("MARKEOD"));
+		voHistoryModelListSorted.add(stagesMaps.get("POSTEOD"));
+		voHistoryModelListSorted.add(stagesMaps.get("MARKBOD"));
+		voHistoryModelListSorted.add(stagesMaps.get("POSTBOD"));
+		voHistoryModelListSorted.add(stagesMaps.get("MARKTI"));
+		voHistoryModelListSorted.add(stagesMaps.get("MARKEOPD"));
+		voHistoryModelListSorted.add(stagesMaps.get("POSTEOPD"));
+
+		// voListHashMap.put("EodHistoryModel", voList);
+		voListHashMap.put("EodHistoryModel", voHistoryModelListSorted);
 		voListHashMap.put("categoryDate", categoryDate);
 
 		return voListHashMap;
 	}
 
-	
 	private static EodHistoryModel convertIEntityToVO(String EocStage, List<Double> data) {
 		EodHistoryModel vo = null;
 		debug("Construction Done for stage:" + EocStage);
@@ -412,8 +415,5 @@ public class EodCurrentRunningBatchUtils {
 		}
 		return vo;
 	}
-	
-	
-	
-	
+
 }
